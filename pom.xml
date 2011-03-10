@@ -76,18 +76,60 @@
         <artifactId>modello-maven-plugin</artifactId>
         <version>1.4.1</version>
         <configuration>
-          <version>4.0.0</version>
-          <models>
-            <model>target/dependency/apache-maven-${mavenVersion}/maven-model/src/main/mdo/maven.mdo</model>
-          </models>
+          <useJava5>true</useJava5>
         </configuration>
         <executions>
           <execution>
-            <id>standard</id>
+            <id>toolchains</id>
             <phase>process-sources</phase>
             <goals>
               <goal>jdom-writer</goal>
             </goals>
+            <configuration>
+              <version>1.0.0</version>
+              <models>
+                <model>target/dependency/apache-maven-${mavenVersion}/maven-core/src/main/mdo/toolchains.mdo</model>
+              </models>
+            </configuration>
+          </execution>
+          <execution>
+            <id>pom</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>jdom-writer</goal>
+            </goals>
+            <configuration>
+              <version>4.0.0</version>
+              <models>
+                <model>target/dependency/apache-maven-${mavenVersion}/maven-model/src/main/mdo/maven.mdo</model>
+              </models>
+            </configuration>
+          </execution>
+          <execution>
+            <id>repository-metadata</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>jdom-writer</goal>
+            </goals>
+            <configuration>
+              <version>1.1.0</version>
+              <models>
+                <model>target/dependency/apache-maven-${mavenVersion}/maven-repository-metadata/src/main/mdo/metadata.mdo</model>
+              </models>
+            </configuration>
+          </execution>
+          <execution>
+            <id>settings</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>jdom-writer</goal>
+            </goals>
+            <configuration>
+              <version>1.1.0</version>
+              <models>
+                <model>target/dependency/apache-maven-${mavenVersion}/maven-settings/src/main/mdo/settings.mdo</model>
+              </models>
+            </configuration>
           </execution>
         </executions>
       </plugin>
