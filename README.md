@@ -10,7 +10,7 @@ Currently, this project produces writers for the following models:
 - toolchains.xml
 - maven-metadata.xml
 
-Examples
+Example
 --------
 
 To write changes to a Maven pom.xml, with formats/comments preserved:
@@ -41,4 +41,12 @@ To write changes to a Maven pom.xml, with formats/comments preserved:
     {
         IOUtil.close( writer );
     }
+
+To use this code, you'll have to add the JDom dependency to your project's pom.xml:
+
+    <dependency>
+      <groupId>org.jdom</groupId>
+      <artifactId>jdom</artifactId>
+      <version>1.1</version>
+    </dependency>
 
