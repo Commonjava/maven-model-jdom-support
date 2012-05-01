@@ -1,0 +1,376 @@
+/*
+ *  Copyright (C) 2012 John Casey.
+ *  
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.apache.maven.io.util;
+
+import org.apache.maven.model.PatternSet;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.jdom.Content;
+import org.jdom.DefaultJDOMFactory;
+import org.jdom.Element;
+import org.jdom.Text;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.Map;
+
+@SuppressWarnings( "all" )
+public final class WriterUtils
+{
+
+    private static final String INDENT = "  ";
+
+    private static final String lineSeparator = "\n";
+
+    private static final DefaultJDOMFactory factory = new DefaultJDOMFactory();
+
+    private WriterUtils()
+    {
+    }
+
+    /**
+     * Method updateElement.
+     * 
+     * @param counter
+     * @param shouldExist
+     * @param name
+     * @param parent
+     * @return Element
+     */
+    public static Element updateElement( final IndentationCounter counter, final Element parent, final String name,
+                                         final boolean shouldExist )
+    {
+        Element element = parent.getChild( name, parent.getNamespace() );
+        if ( shouldExist )
+        {
+            if ( element == null )
+            {
+                element = factory.element( name, parent.getNamespace() );
+                insertAtPreferredLocation( parent, element, counter );
+            }
+            counter.increaseCount();
+        }
+        else if ( element != null )
+        {
+            final int index = parent.indexOf( element );
+            if ( index > 0 )
+            {
+                final Content previous = parent.getContent( index - 1 );
+                if ( previous instanceof Text )
+                {
+                    final Text txt = (Text) previous;
+                    if ( txt.getTextTrim().length() == 0 )
+                    {
+                        parent.removeContent( txt );
+                    }
+                }
+            }
+            parent.removeContent( element );
+        }
+        return element;
+    } // -- Element updateElement( Counter, Element, String, boolean )
+
+    /**
+     * Method findAndReplaceXpp3DOM.
+     * 
+     * @param counter
+     * @param dom
+     * @param name
+     * @param parent
+     * @return Element
+     */
+    public static Element findAndReplaceXpp3DOM( final IndentationCounter counter, final Element parent,
+                                                 final String name, final Xpp3Dom dom )
+    {
+        final boolean shouldExist = ( dom != null ) && ( dom.getChildCount() > 0 || dom.getValue() != null );
+        final Element element = updateElement( counter, parent, name, shouldExist );
+        if ( shouldExist )
+        {
+            replaceXpp3DOM( element, dom, new IndentationCounter( counter.getDepth() + 1 ) );
+        }
+        return element;
+    } // -- Element findAndReplaceXpp3DOM( Counter, Element, String, Xpp3Dom )
+
+    /**
+     * Method replaceXpp3DOM.
+     * 
+     * @param parent
+     * @param counter
+     * @param parentDom
+     */
+    public static void replaceXpp3DOM( final Element parent, final Xpp3Dom parentDom, final IndentationCounter counter )
+    {
+        if ( parentDom.getChildCount() > 0 )
+        {
+            final Xpp3Dom[] childs = parentDom.getChildren();
+            final Collection domChilds = new ArrayList();
+            for ( final Xpp3Dom child : childs )
+            {
+                domChilds.add( child );
+            }
+            final ListIterator it = parent.getChildren().listIterator();
+            while ( it.hasNext() )
+            {
+                final Element elem = (Element) it.next();
+                final Iterator it2 = domChilds.iterator();
+                Xpp3Dom corrDom = null;
+                while ( it2.hasNext() )
+                {
+                    final Xpp3Dom dm = (Xpp3Dom) it2.next();
+                    if ( dm.getName().equals( elem.getName() ) )
+                    {
+                        corrDom = dm;
+                        break;
+                    }
+                }
+                if ( corrDom != null )
+                {
+                    domChilds.remove( corrDom );
+                    replaceXpp3DOM( elem, corrDom, new IndentationCounter( counter.getDepth() + 1 ) );
+                    counter.increaseCount();
+                }
+                else
+                {
+                    it.remove();
+                }
+            }
+            final Iterator it2 = domChilds.iterator();
+            while ( it2.hasNext() )
+            {
+                final Xpp3Dom dm = (Xpp3Dom) it2.next();
+                final Element elem = factory.element( dm.getName(), parent.getNamespace() );
+
+                final String[] attributeNames = dm.getAttributeNames();
+                for ( final String attrName : attributeNames )
+                {
+                    elem.setAttribute( attrName, dm.getAttribute( attrName ) );
+                }
+
+                insertAtPreferredLocation( parent, elem, counter );
+                counter.increaseCount();
+                replaceXpp3DOM( elem, dm, new IndentationCounter( counter.getDepth() + 1 ) );
+            }
+        }
+        else if ( parentDom.getValue() != null )
+        {
+            parent.setText( parentDom.getValue() );
+        }
+    } // -- void replaceXpp3DOM( Element, Xpp3Dom, Counter )
+
+    /**
+     * Method insertAtPreferredLocation.
+     * 
+     * @param parent
+     * @param counter
+     * @param child
+     */
+    public static void insertAtPreferredLocation( final Element parent, final Element child,
+                                                  final IndentationCounter counter )
+    {
+        int contentIndex = 0;
+        int elementCounter = 0;
+        final Iterator it = parent.getContent().iterator();
+        Text lastText = null;
+        int offset = 0;
+        while ( it.hasNext() && elementCounter <= counter.getCurrentIndex() )
+        {
+            final Object next = it.next();
+            offset = offset + 1;
+            if ( next instanceof Element )
+            {
+                elementCounter = elementCounter + 1;
+                contentIndex = contentIndex + offset;
+                offset = 0;
+            }
+            if ( next instanceof Text && it.hasNext() )
+            {
+                lastText = (Text) next;
+            }
+        }
+        if ( lastText != null && lastText.getTextTrim().length() == 0 )
+        {
+            lastText = (Text) lastText.clone();
+        }
+        else
+        {
+            String starter = lineSeparator;
+            for ( int i = 0; i < counter.getDepth(); i++ )
+            {
+                starter = starter + INDENT; // TODO make settable?
+            }
+            lastText = factory.text( starter );
+        }
+        if ( parent.getContentSize() == 0 )
+        {
+            final Text finalText = (Text) lastText.clone();
+            finalText.setText( finalText.getText().substring( 0, finalText.getText().length() - INDENT.length() ) );
+            parent.addContent( contentIndex, finalText );
+        }
+        parent.addContent( contentIndex, child );
+        parent.addContent( contentIndex, lastText );
+    } // -- void insertAtPreferredLocation( Element, Element, Counter )
+
+    /**
+     * Method findAndReplaceProperties.
+     * 
+     * @param counter
+     * @param props
+     * @param name
+     * @param parent
+     * @return Element
+     */
+    public static Element findAndReplaceProperties( final IndentationCounter counter, final Element parent,
+                                                    final String name, final Map props )
+    {
+        final boolean shouldExist = ( props != null ) && !props.isEmpty();
+        final Element element = updateElement( counter, parent, name, shouldExist );
+        if ( shouldExist )
+        {
+            Iterator it = props.keySet().iterator();
+            final IndentationCounter innerCounter = new IndentationCounter( counter.getDepth() + 1 );
+            while ( it.hasNext() )
+            {
+                final String key = (String) it.next();
+                findAndReplaceSimpleElement( innerCounter, element, key, (String) props.get( key ), null );
+            }
+            final ArrayList lst = new ArrayList( props.keySet() );
+            it = element.getChildren().iterator();
+            while ( it.hasNext() )
+            {
+                final Element elem = (Element) it.next();
+                final String key = elem.getName();
+                if ( !lst.contains( key ) )
+                {
+                    it.remove();
+                }
+            }
+        }
+        return element;
+    } // -- Element findAndReplaceProperties( Counter, Element, String, Map )
+
+    /**
+     * Method findAndReplaceSimpleElement.
+     * 
+     * @param counter
+     * @param defaultValue
+     * @param text
+     * @param name
+     * @param parent
+     * @return Element
+     */
+    public static Element findAndReplaceSimpleElement( final IndentationCounter counter, final Element parent,
+                                                       final String name, final String text, final String defaultValue )
+    {
+        if ( ( defaultValue != null ) && ( text != null ) && defaultValue.equals( text ) )
+        {
+            final Element element = parent.getChild( name, parent.getNamespace() );
+            // if exist and is default value or if doesn't exist.. just keep the way it is..
+            if ( ( element != null && defaultValue.equals( element.getText() ) ) || element == null )
+            {
+                return element;
+            }
+        }
+        final boolean shouldExist = ( text != null ) && ( text.trim().length() > 0 );
+        final Element element = updateElement( counter, parent, name, shouldExist );
+        if ( shouldExist )
+        {
+            element.setText( text );
+        }
+        return element;
+    } // -- Element findAndReplaceSimpleElement( Counter, Element, String, String, String )
+
+    /**
+     * Method findAndReplaceSimpleLists.
+     * 
+     * @param counter
+     * @param childName
+     * @param parentName
+     * @param list
+     * @param parent
+     * @return Element
+     */
+    public static Element findAndReplaceSimpleLists( final IndentationCounter counter, final Element parent,
+                                                     final java.util.Collection list, final String parentName,
+                                                     final String childName )
+    {
+        final boolean shouldExist = ( list != null ) && ( list.size() > 0 );
+        final Element element = updateElement( counter, parent, parentName, shouldExist );
+        if ( shouldExist )
+        {
+            final Iterator it = list.iterator();
+            Iterator elIt = element.getChildren( childName, element.getNamespace() ).iterator();
+            if ( !elIt.hasNext() )
+            {
+                elIt = null;
+            }
+            final IndentationCounter innerCount = new IndentationCounter( counter.getDepth() + 1 );
+            while ( it.hasNext() )
+            {
+                final String value = (String) it.next();
+                Element el;
+                if ( elIt != null && elIt.hasNext() )
+                {
+                    el = (Element) elIt.next();
+                    if ( !elIt.hasNext() )
+                    {
+                        elIt = null;
+                    }
+                }
+                else
+                {
+                    el = factory.element( childName, element.getNamespace() );
+                    insertAtPreferredLocation( element, el, innerCount );
+                }
+                el.setText( value );
+                innerCount.increaseCount();
+            }
+            if ( elIt != null )
+            {
+                while ( elIt.hasNext() )
+                {
+                    elIt.next();
+                    elIt.remove();
+                }
+            }
+        }
+        return element;
+    } // -- Element findAndReplaceSimpleLists( Counter, Element, java.util.Collection, String, String )
+
+    /**
+     * Method updatePatternSet.
+     * 
+     * @param patternSet
+     * @param element
+     * @param counter
+     * @param xmlTag
+     */
+    public static void updatePatternSet( final PatternSet patternSet, final String xmlTag,
+                                         final IndentationCounter counter, final Element element )
+    {
+        final boolean shouldExist = ( patternSet != null );
+        final Element root = updateElement( counter, element, xmlTag, shouldExist );
+        if ( shouldExist )
+        {
+            final IndentationCounter innerCount = new IndentationCounter( counter.getDepth() + 1 );
+            findAndReplaceSimpleLists( innerCount, root, patternSet.getIncludes(), "includes", "include" );
+            findAndReplaceSimpleLists( innerCount, root, patternSet.getExcludes(), "excludes", "exclude" );
+        }
+    } // -- void updatePatternSet( PatternSet, String, Counter, Element )
+
+}
