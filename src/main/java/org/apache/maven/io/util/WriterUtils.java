@@ -286,7 +286,7 @@ public final class WriterUtils
                 return element;
             }
         }
-        final boolean shouldExist = ( text != null ) && ( text.trim().length() > 0 );
+        final boolean shouldExist = ( text != null ) && ( text.trim().length() >= 0 );
         final Element element = updateElement( counter, parent, name, shouldExist );
         if ( shouldExist )
         {
