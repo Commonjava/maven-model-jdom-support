@@ -21,22 +21,19 @@ import static org.apache.maven.io.util.WriterUtils.findAndReplaceSimpleLists;
 import static org.apache.maven.io.util.WriterUtils.insertAtPreferredLocation;
 import static org.apache.maven.io.util.WriterUtils.updateElement;
 
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.maven.artifact.repository.metadata.Metadata;
 import org.apache.maven.artifact.repository.metadata.Plugin;
 import org.apache.maven.artifact.repository.metadata.Snapshot;
 import org.apache.maven.artifact.repository.metadata.SnapshotVersion;
 import org.apache.maven.artifact.repository.metadata.Versioning;
+import org.apache.maven.io.util.AbstractJDOMWriter;
 import org.apache.maven.io.util.IndentationCounter;
-import org.jdom.DefaultJDOMFactory;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
+import org.jdom2.Element;
+import org.jdom2.JDOMFactory;
+import org.jdom2.UncheckedJDOMFactory;
 
 /**
  * Class MetadataJDOMWriter.
@@ -45,6 +42,7 @@ import java.util.Iterator;
  */
 @SuppressWarnings( "all" )
 public class MetadataJDOMWriter
+    extends AbstractJDOMWriter<Metadata, MetadataJDOMWriter>
 {
 
     private static final String INDENT = "  ";
@@ -56,7 +54,7 @@ public class MetadataJDOMWriter
     /**
      * Field factory.
      */
-    private final DefaultJDOMFactory factory;
+    private final JDOMFactory factory;
 
     /**
      * Field lineSeparator.
@@ -69,7 +67,7 @@ public class MetadataJDOMWriter
 
     public MetadataJDOMWriter()
     {
-        factory = new DefaultJDOMFactory();
+        factory = new UncheckedJDOMFactory();
         lineSeparator = "\n";
     } // -- org.apache.maven.artifact.repository.metadata.io.jdom.MetadataJDOMWriter()
 
@@ -332,60 +330,11 @@ public class MetadataJDOMWriter
         }
     } // -- void updateVersioning( Versioning, String, Counter, Element )
 
-    /**
-     * Method write.
-     * @deprecated
-     * 
-     * @param metadata
-     * @param stream
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Metadata metadata, final Document document, final OutputStream stream )
-        throws java.io.IOException
+    @Override
+    protected void update( final Metadata source, final IndentationCounter indentationCounter, final Element rootElement )
+        throws IOException
     {
-        updateMetadata( metadata, "metadata", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( Format.getPrettyFormat()
-                                   .setIndent( "    " )
-                                   .setLineSeparator( System.getProperty( "line.separator" ) ) );
-        outputter.output( document, stream );
-    } // -- void write( Metadata, Document, OutputStream )
-
-    /**
-     * Method write.
-     * 
-     * @param metadata
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Metadata metadata, final Document document, final OutputStreamWriter writer )
-        throws java.io.IOException
-    {
-        final Format format =
-            Format.getRawFormat()
-                  .setEncoding( writer.getEncoding() )
-                  .setLineSeparator( System.getProperty( "line.separator" ) );
-        write( metadata, document, writer, format );
-    } // -- void write( Metadata, Document, OutputStreamWriter )
-
-    /**
-     * Method write.
-     * 
-     * @param metadata
-     * @param jdomFormat
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Metadata metadata, final Document document, final Writer writer, final Format jdomFormat )
-        throws java.io.IOException
-    {
-        updateMetadata( metadata, "metadata", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( jdomFormat );
-        outputter.output( document, writer );
-    } // -- void write( Metadata, Document, Writer, Format )
+        updateMetadata( source, "metadata", indentationCounter, rootElement );
+    }
 
 }

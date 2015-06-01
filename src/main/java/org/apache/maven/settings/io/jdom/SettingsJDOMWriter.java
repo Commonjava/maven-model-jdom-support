@@ -23,6 +23,10 @@ import static org.apache.maven.io.util.WriterUtils.findAndReplaceXpp3DOM;
 import static org.apache.maven.io.util.WriterUtils.insertAtPreferredLocation;
 import static org.apache.maven.io.util.WriterUtils.updateElement;
 
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.maven.io.util.AbstractJDOMWriter;
 import org.apache.maven.io.util.IndentationCounter;
 import org.apache.maven.settings.Activation;
 import org.apache.maven.settings.ActivationFile;
@@ -39,16 +43,9 @@ import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.TrackableBase;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.jdom.DefaultJDOMFactory;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
+import org.jdom2.Element;
+import org.jdom2.JDOMFactory;
+import org.jdom2.UncheckedJDOMFactory;
 
 /**
  * Class SettingsJDOMWriter.
@@ -57,6 +54,7 @@ import java.util.Iterator;
  */
 @SuppressWarnings( "all" )
 public class SettingsJDOMWriter
+    extends AbstractJDOMWriter<Settings, SettingsJDOMWriter>
 {
 
     // --------------------------/
@@ -68,7 +66,7 @@ public class SettingsJDOMWriter
     /**
      * Field factory.
      */
-    private final DefaultJDOMFactory factory;
+    private final JDOMFactory factory;
 
     /**
      * Field lineSeparator.
@@ -81,7 +79,7 @@ public class SettingsJDOMWriter
 
     public SettingsJDOMWriter()
     {
-        factory = new DefaultJDOMFactory();
+        factory = new UncheckedJDOMFactory();
         lineSeparator = "\n";
     } // -- org.apache.maven.settings.io.jdom.SettingsJDOMWriter()
 
@@ -797,60 +795,11 @@ public class SettingsJDOMWriter
         }
     } // -- void updateTrackableBase( TrackableBase, String, Counter, Element )
 
-    /**
-     * Method write.
-     * @deprecated
-     * 
-     * @param settings
-     * @param stream
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Settings settings, final Document document, final OutputStream stream )
-        throws java.io.IOException
+    @Override
+    protected void update( final Settings source, final IndentationCounter indentationCounter, final Element rootElement )
+        throws IOException
     {
-        updateSettings( settings, "settings", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( Format.getPrettyFormat()
-                                   .setIndent( "    " )
-                                   .setLineSeparator( System.getProperty( "line.separator" ) ) );
-        outputter.output( document, stream );
-    } // -- void write( Settings, Document, OutputStream )
-
-    /**
-     * Method write.
-     * 
-     * @param settings
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Settings settings, final Document document, final OutputStreamWriter writer )
-        throws java.io.IOException
-    {
-        final Format format =
-            Format.getRawFormat()
-                  .setEncoding( writer.getEncoding() )
-                  .setLineSeparator( System.getProperty( "line.separator" ) );
-        write( settings, document, writer, format );
-    } // -- void write( Settings, Document, OutputStreamWriter )
-
-    /**
-     * Method write.
-     * 
-     * @param settings
-     * @param jdomFormat
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Settings settings, final Document document, final Writer writer, final Format jdomFormat )
-        throws java.io.IOException
-    {
-        updateSettings( settings, "settings", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( jdomFormat );
-        outputter.output( document, writer );
-    } // -- void write( Settings, Document, Writer, Format )
+        updateSettings( source, "settings", indentationCounter, rootElement );
+    }
 
 }
