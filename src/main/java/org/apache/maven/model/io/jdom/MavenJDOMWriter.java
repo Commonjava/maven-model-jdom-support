@@ -1,19 +1,18 @@
-/*
- * Copyright 2012, Apache Software Foundation
- * 
+/**
+ * Copyright (C) 2012 Apache Software Foundation (jdcasey@commonjava.org)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.maven.model.io.jdom;
 
 import static org.apache.maven.io.util.WriterUtils.findAndReplaceProperties;
@@ -23,6 +22,10 @@ import static org.apache.maven.io.util.WriterUtils.findAndReplaceXpp3DOM;
 import static org.apache.maven.io.util.WriterUtils.insertAtPreferredLocation;
 import static org.apache.maven.io.util.WriterUtils.updateElement;
 
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.maven.io.util.AbstractJDOMWriter;
 import org.apache.maven.io.util.IndentationCounter;
 import org.apache.maven.model.Activation;
 import org.apache.maven.model.ActivationFile;
@@ -67,16 +70,7 @@ import org.apache.maven.model.Resource;
 import org.apache.maven.model.Scm;
 import org.apache.maven.model.Site;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.jdom.DefaultJDOMFactory;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
+import org.jdom2.Element;
 
 /**
  * Class MavenJDOMWriter.
@@ -85,29 +79,21 @@ import java.util.Iterator;
  */
 @SuppressWarnings( "all" )
 public class MavenJDOMWriter
+    extends AbstractJDOMWriter<Model, MavenJDOMWriter>
 {
-
-    // --------------------------/
-    // - Class/Member Variables -/
-    // --------------------------/
-
-    /**
-     * Field factory.
-     */
-    private final DefaultJDOMFactory factory;
-
-    // ----------------/
-    // - Constructors -/
-    // ----------------/
-
     public MavenJDOMWriter()
     {
-        factory = new DefaultJDOMFactory();
-    } // -- org.apache.maven.model.io.jdom.MavenJDOMWriter()
+    }
 
-    // -----------/
-    // - Methods -/
-    // -----------/
+    public MavenJDOMWriter( final String encoding )
+    {
+        super( encoding );
+    }
+
+    public MavenJDOMWriter( final Model model )
+    {
+        super( model.getModelEncoding() == null ? "UTF-8" : model.getModelEncoding() );
+    }
 
     /**
      * Method iterateContributor.
@@ -2262,64 +2248,11 @@ public class MavenJDOMWriter
         }
     } // -- void updateSite( Site, String, Counter, Element )
 
-    /**
-     * Method write.
-     * @deprecated
-     * 
-     * @param model
-     * @param stream
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Model model, final Document document, final OutputStream stream )
-        throws java.io.IOException
+    @Override
+    protected void update( final Model source, final IndentationCounter indentationCounter, final Element rootElement )
+        throws IOException
     {
-        updateModel( model, "project", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( Format.getPrettyFormat()
-                                   .setIndent( "    " )
-                                   .setLineSeparator( System.getProperty( "line.separator" ) ) );
-        outputter.output( document, stream );
-    } // -- void write( Model, Document, OutputStream )
-
-    /**
-     * Method write.
-     * 
-     * @param model
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Model model, final Document document, final OutputStreamWriter writer )
-        throws java.io.IOException
-    {
-        final Format format =
-            Format.getRawFormat()
-                  .setEncoding( writer.getEncoding() )
-                  .setLineSeparator( System.getProperty( "line.separator" ) );
-        write( model, document, writer, format );
-    } // -- void write( Model, Document, OutputStreamWriter )
-
-    /**
-     * Method write.
-     * 
-     * @param model
-     * @param jdomFormat
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final Model model, final Document document, final Writer writer, final Format jdomFormat )
-        throws java.io.IOException
-    {
-        updateModel( model, "project", new IndentationCounter( 0 ), document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( jdomFormat );
-        outputter.output( document, writer );
-    } // -- void write( Model, Document, Writer, Format )
-
-    // -----------------/
-    // - Inner Classes -/
-    // -----------------/
+        updateModel( source, "project", indentationCounter, rootElement );
+    }
 
 }

@@ -1,34 +1,33 @@
-/*
- *  Copyright (C) 2012 John Casey.
- *  
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU Affero General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *  
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Affero General Public License for more details.
- *  
- *  You should have received a copy of the GNU Affero General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/**
+ * Copyright (C) 2012 Apache Software Foundation (jdcasey@commonjava.org)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.maven.io.util;
-
-import org.apache.maven.model.PatternSet;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.jdom.Content;
-import org.jdom.DefaultJDOMFactory;
-import org.jdom.Element;
-import org.jdom.Text;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
+
+import org.apache.maven.model.PatternSet;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.jdom2.Content;
+import org.jdom2.DefaultJDOMFactory;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
+import org.jdom2.Text;
 
 @SuppressWarnings( "all" )
 public final class WriterUtils
@@ -154,11 +153,30 @@ public final class WriterUtils
             while ( it2.hasNext() )
             {
                 final Xpp3Dom dm = (Xpp3Dom) it2.next();
-                final Element elem = factory.element( dm.getName(), parent.getNamespace() );
+                final String rawName = dm.getName();
+                final String[] parts = rawName.split( ":" );
+
+                Element elem;
+                if ( parts.length > 1 )
+                {
+                    final String nsId = parts[0];
+                    final String nsUrl = dm.getAttribute( "xmlns:" + nsId );
+                    final String name = parts[1];
+
+                    elem = factory.element( name, Namespace.getNamespace( nsId, nsUrl ) );
+                }
+                else
+                {
+                    elem = factory.element( dm.getName(), parent.getNamespace() );
+                }
 
                 final String[] attributeNames = dm.getAttributeNames();
                 for ( final String attrName : attributeNames )
                 {
+                    if ( attrName.startsWith( "xmlns:" ) )
+                    {
+                        continue;
+                    }
                     elem.setAttribute( attrName, dm.getAttribute( attrName ) );
                 }
 
@@ -205,7 +223,7 @@ public final class WriterUtils
         }
         if ( lastText != null && lastText.getTextTrim().length() == 0 )
         {
-            lastText = (Text) lastText.clone();
+            lastText = lastText.clone();
         }
         else
         {
@@ -218,7 +236,7 @@ public final class WriterUtils
         }
         if ( parent.getContentSize() == 0 )
         {
-            final Text finalText = (Text) lastText.clone();
+            final Text finalText = lastText.clone();
             finalText.setText( finalText.getText().substring( 0, finalText.getText().length() - INDENT.length() ) );
             parent.addContent( contentIndex, finalText );
         }

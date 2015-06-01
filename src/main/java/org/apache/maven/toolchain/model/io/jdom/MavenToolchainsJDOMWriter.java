@@ -1,39 +1,35 @@
-/*
- * Copyright 2012, Apache Software Foundation
- * 
+/**
+ * Copyright (C) 2012 Apache Software Foundation (jdcasey@commonjava.org)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.maven.toolchain.model.io.jdom;
 
 import static org.apache.maven.io.util.WriterUtils.findAndReplaceSimpleElement;
 import static org.apache.maven.io.util.WriterUtils.findAndReplaceXpp3DOM;
 
+import java.io.IOException;
+import java.util.Iterator;
+
+import org.apache.maven.io.util.AbstractJDOMWriter;
 import org.apache.maven.io.util.IndentationCounter;
 import org.apache.maven.toolchain.model.PersistedToolchains;
 import org.apache.maven.toolchain.model.ToolchainModel;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.jdom.DefaultJDOMFactory;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Text;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.Iterator;
+import org.jdom2.Element;
+import org.jdom2.JDOMFactory;
+import org.jdom2.Text;
+import org.jdom2.UncheckedJDOMFactory;
 
 /**
  * Class MavenToolchainsJDOMWriter.
@@ -42,6 +38,7 @@ import java.util.Iterator;
  */
 @SuppressWarnings( "all" )
 public class MavenToolchainsJDOMWriter
+    extends AbstractJDOMWriter<PersistedToolchains, MavenToolchainsJDOMWriter>
 {
 
     // --------------------------/
@@ -53,7 +50,7 @@ public class MavenToolchainsJDOMWriter
     /**
      * Field factory.
      */
-    private final DefaultJDOMFactory factory;
+    private final JDOMFactory factory;
 
     /**
      * Field lineSeparator.
@@ -66,7 +63,7 @@ public class MavenToolchainsJDOMWriter
 
     public MavenToolchainsJDOMWriter()
     {
-        factory = new DefaultJDOMFactory();
+        factory = new UncheckedJDOMFactory();
         lineSeparator = "\n";
     } // -- org.apache.maven.toolchain.model.io.jdom.MavenToolchainsJDOMWriter()
 
@@ -86,7 +83,8 @@ public class MavenToolchainsJDOMWriter
     {
         int contentIndex = 0;
         int elementCounter = 0;
-        final Iterator it = parent.getContent().iterator();
+        final Iterator it = parent.getContent()
+                                  .iterator();
         Text lastText = null;
         int offset = 0;
         while ( it.hasNext() && elementCounter <= counter.getCurrentIndex() )
@@ -104,9 +102,10 @@ public class MavenToolchainsJDOMWriter
                 lastText = (Text) next;
             }
         }
-        if ( lastText != null && lastText.getTextTrim().length() == 0 )
+        if ( lastText != null && lastText.getTextTrim()
+                                         .length() == 0 )
         {
-            lastText = (Text) lastText.clone();
+            lastText = lastText.clone();
         }
         else
         {
@@ -119,8 +118,10 @@ public class MavenToolchainsJDOMWriter
         }
         if ( parent.getContentSize() == 0 )
         {
-            final Text finalText = (Text) lastText.clone();
-            finalText.setText( finalText.getText().substring( 0, finalText.getText().length() - INDENT.length() ) );
+            final Text finalText = lastText.clone();
+            finalText.setText( finalText.getText()
+                                        .substring( 0, finalText.getText()
+                                                                .length() - INDENT.length() ) );
             parent.addContent( contentIndex, finalText );
         }
         parent.addContent( contentIndex, child );
@@ -139,7 +140,8 @@ public class MavenToolchainsJDOMWriter
                                            final java.util.Collection list, final java.lang.String childTag )
     {
         final Iterator it = list.iterator();
-        Iterator elIt = parent.getChildren( childTag, parent.getNamespace() ).iterator();
+        Iterator elIt = parent.getChildren( childTag, parent.getNamespace() )
+                              .iterator();
         if ( !elIt.hasNext() )
         {
             elIt = null;
@@ -204,77 +206,18 @@ public class MavenToolchainsJDOMWriter
     {
         final Element root = element;
         final IndentationCounter innerCount = new IndentationCounter( counter.getDepth() + 1 );
-        findAndReplaceSimpleElement( innerCount,
-                                     root,
-                                     "type",
-                                     toolchainModel.getType() == null ? null : toolchainModel.getType(),
-                                     null );
+        findAndReplaceSimpleElement( innerCount, root, "type",
+                                     toolchainModel.getType() == null ? null : toolchainModel.getType(), null );
         findAndReplaceXpp3DOM( innerCount, root, "provides", (Xpp3Dom) toolchainModel.getProvides() );
         findAndReplaceXpp3DOM( innerCount, root, "configuration", (Xpp3Dom) toolchainModel.getConfiguration() );
     } // -- void updateToolchainModel( ToolchainModel, String, Counter, Element )
 
-    /**
-     * Method write.
-     * @deprecated
-     * 
-     * @param persistedToolchains
-     * @param stream
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final PersistedToolchains persistedToolchains, final Document document, final OutputStream stream )
-        throws java.io.IOException
+    @Override
+    protected void update( final PersistedToolchains source, final IndentationCounter indentationCounter,
+                           final Element rootElement )
+        throws IOException
     {
-        updatePersistedToolchains( persistedToolchains,
-                                   "toolchains",
-                                   new IndentationCounter( 0 ),
-                                   document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( Format.getPrettyFormat()
-                                   .setIndent( "    " )
-                                   .setLineSeparator( System.getProperty( "line.separator" ) ) );
-        outputter.output( document, stream );
-    } // -- void write( PersistedToolchains, Document, OutputStream )
-
-    /**
-     * Method write.
-     * 
-     * @param persistedToolchains
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final PersistedToolchains persistedToolchains, final Document document,
-                       final OutputStreamWriter writer )
-        throws java.io.IOException
-    {
-        final Format format =
-            Format.getRawFormat()
-                  .setEncoding( writer.getEncoding() )
-                  .setLineSeparator( System.getProperty( "line.separator" ) );
-        write( persistedToolchains, document, writer, format );
-    } // -- void write( PersistedToolchains, Document, OutputStreamWriter )
-
-    /**
-     * Method write.
-     * 
-     * @param persistedToolchains
-     * @param jdomFormat
-     * @param writer
-     * @param document
-     * @throws java.io.IOException
-     */
-    public void write( final PersistedToolchains persistedToolchains, final Document document, final Writer writer,
-                       final Format jdomFormat )
-        throws java.io.IOException
-    {
-        updatePersistedToolchains( persistedToolchains,
-                                   "toolchains",
-                                   new IndentationCounter( 0 ),
-                                   document.getRootElement() );
-        final XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat( jdomFormat );
-        outputter.output( document, writer );
-    } // -- void write( PersistedToolchains, Document, Writer, Format )
+        updatePersistedToolchains( source, "toolchains", indentationCounter, rootElement );
+    }
 
 }
