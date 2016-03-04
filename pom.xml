@@ -27,7 +27,7 @@
   
   <groupId>org.commonjava.maven</groupId>
   <artifactId>maven3-model-jdom-support</artifactId>
-  <version>1.3.2-SNAPSHOT</version>
+  <version>1.4</version>
 
   <name>maven-model-jdom-support</name>
 
@@ -35,7 +35,7 @@
     <connection>scm:git:http://jdcasey@github.com/jdcasey/maven-model-jdom-support.git</connection>
     <developerConnection>scm:git:git@github.com:jdcasey/maven-model-jdom-support.git</developerConnection>
     <url>http://github.com/jdcasey/maven-model-jdom-support</url>
-    <tag>HEAD</tag>
+    <tag>maven3-model-jdom-support-1.4</tag>
   </scm>
   
   <properties>
