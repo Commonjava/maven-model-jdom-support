@@ -18,20 +18,32 @@ package org.apache.maven.io.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.WriterFactory;
+import org.jdom2.Comment;
+import org.jdom2.Content;
+import org.jdom2.DocType;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.JDOMFactory;
+import org.jdom2.ProcessingInstruction;
+import org.jdom2.Text;
 import org.jdom2.UncheckedJDOMFactory;
+import org.jdom2.Verifier;
 import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.EscapeStrategy;
 import org.jdom2.output.Format;
 import org.jdom2.output.Format.TextMode;
 import org.jdom2.output.LineSeparator;
 import org.jdom2.output.XMLOutputter;
+import org.jdom2.output.support.AbstractXMLOutputProcessor;
+import org.jdom2.output.support.FormatStack;
+import org.jdom2.output.support.Walker;
+import org.jdom2.util.NamespaceStack;
 
 @SuppressWarnings( "unchecked" )
 public abstract class AbstractJDOMWriter<T, TYPE extends AbstractJDOMWriter<T, TYPE>>
@@ -87,7 +99,99 @@ public abstract class AbstractJDOMWriter<T, TYPE extends AbstractJDOMWriter<T, T
         {
             modifier.postProcess( document );
         }
-        final XMLOutputter outputter = new XMLOutputter();
+        // Override XMLOutputter to correct initial comment trailing newlines.
+        final XMLOutputter outputter = new XMLOutputter(new AbstractXMLOutputProcessor()
+        {
+            /**
+             * This will handle printing of a {@link Document}.
+             *
+             * @param out    <code>Writer</code> to use.
+             * @param fstack the FormatStack
+             * @param nstack the NamespaceStack
+             * @param doc    <code>Document</code> to write.
+             * @throws IOException if the destination Writer fails
+             */
+            @Override protected void printDocument(Writer out, FormatStack fstack, NamespaceStack nstack, Document doc)
+                    throws IOException
+            {
+
+                // If there is no root element then we cannot use the normal ways to
+                // access the ContentList because Document throws an exception.
+                // so we hack it and just access it by index.
+                List<Content> list = doc.hasRootElement() ? doc.getContent() :
+                        new ArrayList<Content>(doc.getContentSize());
+                if (list.isEmpty()) {
+                    final int sz = doc.getContentSize();
+                    for (int i = 0; i < sz; i++) {
+                        list.add(doc.getContent(i));
+                    }
+                }
+
+                printDeclaration(out, fstack);
+
+                Walker walker = buildWalker(fstack, list, true);
+                if (walker.hasNext()) {
+                    while (walker.hasNext()) {
+
+                        final Content c = walker.next();
+                        // we do not ignore Text-like things in the Document.
+                        // the walker creates the indenting for us.
+                        if (c == null) {
+                            // but, what we do is ensure it is all whitespace, and not CDATA
+                            final String padding = walker.text();
+                            if (padding != null && Verifier.isAllXMLWhitespace(padding) &&
+                                    !walker.isCDATA()) {
+                                // we do not use the escaping or text* method because this
+                                // content is outside of the root element, and thus is not
+                                // strict text.
+                                write(out, padding);
+                            }
+                        } else {
+                            switch (c.getCType()) {
+                                case Comment :
+                                    printComment(out, fstack, (Comment)c);
+                                    // This modification we have made to the overridden method in order
+                                    // to correct newline declarations.
+                                    write(out, fstack.getLineSeparator());
+                                    break;
+                                case DocType :
+                                    printDocType(out, fstack, (DocType)c);
+                                    break;
+                                case Element :
+                                    printElement(out, fstack, nstack, (Element)c);
+                                    if (walker.hasNext())
+                                    {
+                                        // This modification we have made to the overridden method in order
+                                        // to correct newline declarations.
+                                        write(out, fstack.getLineSeparator());
+                                    }
+                                    break;
+                                case ProcessingInstruction :
+                                    printProcessingInstruction(out, fstack,
+                                            (ProcessingInstruction)c);
+                                    break;
+                                case Text :
+                                    final String padding = ((Text)c).getText();
+                                    if (padding != null && Verifier.isAllXMLWhitespace(padding)) {
+                                        // we do not use the escaping or text* method because this
+                                        // content is outside of the root element, and thus is not
+                                        // strict text.
+                                        write(out, padding);
+                                    }
+                                default :
+                                    // do nothing.
+                            }
+                        }
+
+                    }
+
+                    if (fstack.getLineSeparator() != null) {
+                        write(out, fstack.getLineSeparator());
+                    }
+                }
+            }
+        });
+
         outputter.setFormat( jdomFormat );
         outputter.output( document, writer );
     }
