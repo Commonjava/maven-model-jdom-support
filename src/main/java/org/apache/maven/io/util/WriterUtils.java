@@ -18,11 +18,13 @@ package org.apache.maven.io.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
 import org.apache.maven.model.PatternSet;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.jdom2.CDATA;
 import org.jdom2.Content;
 import org.jdom2.DefaultJDOMFactory;
 import org.jdom2.Element;
@@ -187,7 +189,25 @@ public final class WriterUtils
         }
         else if ( parentDom.getValue() != null )
         {
-            parent.setText( parentDom.getValue() );
+            List<Content> cl = parent.getContent();
+            boolean foundCdata = false;
+            for ( Content c : cl )
+            {
+                if (c instanceof CDATA)
+                {
+                    // If its a CDATA and, ignoring whitespace, there are differences then replace the text.
+                    if ( ! ((CDATA) c).getTextTrim().equals(parentDom.getValue()) )
+                    {
+                        ((CDATA) c).setText(parentDom.getValue());
+                    }
+                    foundCdata = true;
+                }
+            }
+
+            if ( ! foundCdata)
+            {
+                parent.setText( parentDom.getValue() );
+            }
         }
     } // -- void replaceXpp3DOM( Element, Xpp3Dom, Counter )
 
