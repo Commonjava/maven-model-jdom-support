@@ -32,9 +32,9 @@
   <name>maven-model-jdom-support</name>
 
   <scm>
-    <connection>scm:git:http://jdcasey@github.com/jdcasey/maven-model-jdom-support.git</connection>
-    <developerConnection>scm:git:git@github.com:jdcasey/maven-model-jdom-support.git</developerConnection>
-    <url>http://github.com/jdcasey/maven-model-jdom-support</url>
+    <connection>scm:git:http://github.com/commonjava/maven-model-jdom-support.git</connection>
+    <developerConnection>scm:git:git@github.com:commonjava/maven-model-jdom-support.git</developerConnection>
+    <url>http://github.com/commonjava/maven-model-jdom-support</url>
     <tag>HEAD</tag>
   </scm>
   
