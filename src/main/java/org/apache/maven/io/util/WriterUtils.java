@@ -15,13 +15,6 @@
  */
 package org.apache.maven.io.util;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-
 import org.apache.maven.model.PatternSet;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.jdom2.CDATA;
@@ -30,6 +23,13 @@ import org.jdom2.DefaultJDOMFactory;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
 import org.jdom2.Text;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 @SuppressWarnings( "all" )
 public final class WriterUtils
@@ -162,14 +162,26 @@ public final class WriterUtils
                 if ( parts.length > 1 )
                 {
                     final String nsId = parts[0];
-                    final String nsUrl = dm.getAttribute( "xmlns:" + nsId );
+                    String nsUrl = dm.getAttribute( "xmlns:" + nsId );
                     final String name = parts[1];
-
+                    if ( nsUrl == null )
+                    {
+                        nsUrl = parentDom.getAttribute( "xmlns:" + nsId );
+                    }
                     elem = factory.element( name, Namespace.getNamespace( nsId, nsUrl ) );
                 }
                 else
                 {
-                    elem = factory.element( dm.getName(), parent.getNamespace() );
+                    Namespace root = parent.getNamespace();
+                    for ( Namespace n : parent.getNamespacesInherited())
+                    {
+                        if ( n.getPrefix() == null || n.getPrefix().length() == 0 )
+                        {
+                            root = n;
+                            break;
+                        }
+                    }
+                    elem = factory.element( dm.getName(), root );
                 }
 
                 final String[] attributeNames = dm.getAttributeNames();
