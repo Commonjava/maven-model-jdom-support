@@ -207,11 +207,6 @@ public final class WriterUtils
             {
                 if (c instanceof CDATA)
                 {
-                    // If its a CDATA and, ignoring whitespace, there are differences then replace the text.
-                    if ( ! ((CDATA) c).getTextTrim().equals(parentDom.getValue()) )
-                    {
-                        ((CDATA) c).setText(parentDom.getValue());
-                    }
                     foundCdata = true;
                 }
             }
