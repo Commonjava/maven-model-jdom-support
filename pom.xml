@@ -41,7 +41,7 @@
   <properties>
     <projectOwner>Apache Software Foundation</projectOwner>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <mavenVersion>3.0.3</mavenVersion>
+    <mavenVersion>3.5.3</mavenVersion>
   </properties>
 
   <dependencyManagement>
