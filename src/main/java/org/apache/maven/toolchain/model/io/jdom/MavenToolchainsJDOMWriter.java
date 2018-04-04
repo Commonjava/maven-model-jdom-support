@@ -15,6 +15,7 @@
  */
 package org.apache.maven.toolchain.model.io.jdom;
 
+import static org.apache.maven.io.util.WriterUtils.findAndReplaceProperties;
 import static org.apache.maven.io.util.WriterUtils.findAndReplaceSimpleElement;
 import static org.apache.maven.io.util.WriterUtils.findAndReplaceXpp3DOM;
 
@@ -208,7 +209,7 @@ public class MavenToolchainsJDOMWriter
         final IndentationCounter innerCount = new IndentationCounter( counter.getDepth() + 1 );
         findAndReplaceSimpleElement( innerCount, root, "type",
                                      toolchainModel.getType() == null ? null : toolchainModel.getType(), null );
-        findAndReplaceXpp3DOM( innerCount, root, "provides", (Xpp3Dom) toolchainModel.getProvides() );
+        findAndReplaceProperties( innerCount, root, "provides", toolchainModel.getProvides() );
         findAndReplaceXpp3DOM( innerCount, root, "configuration", (Xpp3Dom) toolchainModel.getConfiguration() );
     } // -- void updateToolchainModel( ToolchainModel, String, Counter, Element )
 
