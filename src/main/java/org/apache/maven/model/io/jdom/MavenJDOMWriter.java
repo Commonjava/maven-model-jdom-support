@@ -169,6 +169,7 @@ public class MavenJDOMWriter
         {
             final Iterator it = list.iterator();
             Iterator elIt = element.getChildren( childTag, element.getNamespace() ).iterator();
+            int elItCounter = 0;
             if ( !elIt.hasNext() )
             {
                 elIt = null;
@@ -181,6 +182,7 @@ public class MavenJDOMWriter
                 if ( elIt != null && elIt.hasNext() )
                 {
                     el = (Element) elIt.next();
+                    elItCounter++;
                     if ( !elIt.hasNext() )
                     {
                         elIt = null;
@@ -191,6 +193,7 @@ public class MavenJDOMWriter
                     el = factory.element( childTag, element.getNamespace() );
                     insertAtPreferredLocation( element, el, innerCount );
                 }
+                populateDepIfExist(value, childTag, element, el, elItCounter);
                 updateDependency( value, childTag, innerCount, el );
                 innerCount.increaseCount();
             }
@@ -204,6 +207,35 @@ public class MavenJDOMWriter
             }
         }
     } // -- void iterateDependency( Counter, Element, java.util.Collection, java.lang.String, java.lang.String )
+
+    /***
+     * If the dependency already exists in doc, will clone the content to the target element, to avoid format issue
+     * @param dep the dependency in pomModel, which is writing to doc
+     * @param childTag target element tag
+     * @param parent dependencies element
+     * @param targetEle the element which is writing to
+     */
+    private void populateDepIfExist(Dependency dep, String childTag,Element parent, Element targetEle, int targetCounter) {
+        Iterator elIt = parent.getChildren(childTag, parent.getNamespace() ).iterator();
+        int counter = 0;
+        while (elIt.hasNext()) {
+            Element el = (Element) elIt.next();
+            counter++;
+            if (counter < targetCounter) {
+                continue;
+            }
+            if (dep.getArtifactId() != null && dep.getGroupId() != null) {
+                Element artifactEl = el.getChild("artifactId", el.getNamespace());
+                Element groupEl = el.getChild("groupId", el.getNamespace());
+                if (artifactEl != null && groupEl != null
+                        && dep.getArtifactId().equals(artifactEl.getText())
+                        && dep.getGroupId().equals(groupEl.getText())) {
+                    targetEle.setContent(el.cloneContent());
+                    break;
+                }
+            }
+        }
+    }
 
     /**
      * Method iterateDeveloper.

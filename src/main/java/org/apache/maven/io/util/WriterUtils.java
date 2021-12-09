@@ -15,6 +15,7 @@
  */
 package org.apache.maven.io.util;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.maven.model.PatternSet;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.jdom2.CDATA;
@@ -35,7 +36,7 @@ import java.util.Map;
 public final class WriterUtils
 {
 
-    private static final String INDENT = "  ";
+    private static final String defaultIndent = "  ";
 
     private static final String lineSeparator = "\n";
 
@@ -248,6 +249,7 @@ public final class WriterUtils
                 lastText = (Text) next;
             }
         }
+        String indent = deduceIndent(parent, counter);
         if ( lastText != null && lastText.getTextTrim().length() == 0 )
         {
             lastText = lastText.clone();
@@ -257,23 +259,64 @@ public final class WriterUtils
             String starter = lineSeparator;
             for ( int i = 0; i < counter.getDepth(); i++ )
             {
-                starter = starter + INDENT; // TODO make settable?
+                starter = starter + indent; // TODO make settable?
             }
             lastText = factory.text( starter );
         }
         if ( parent.getContentSize() == 0 )
         {
             final Text finalText = lastText.clone();
-            finalText.setText( finalText.getText().substring( 0, finalText.getText().length() - INDENT.length() ) );
+            finalText.setText( finalText.getText().substring( 0, finalText.getText().length() - indent.length() ) );
             parent.addContent( contentIndex, finalText );
         }
         parent.addContent( contentIndex, child );
         parent.addContent( contentIndex, lastText );
     } // -- void insertAtPreferredLocation( Element, Element, Counter )
 
+
+    public static String deduceIndent(Element parent, IndentationCounter counter) {
+        String indent = defaultIndent;
+        try {
+            boolean isDeduced = false;
+            for (int level = counter.getDepth(); level > 0; level--) {
+                for (int i = parent.getContentSize() - 1; i >= 0; i--) {
+                    Content content = parent.getContent().get(i);
+                    if (i == parent.getContentSize() - 1) {
+                        continue;
+                    }
+                    if (content instanceof Text) {
+                        String text = content.getValue();
+                        String[] textArr = text.split(IOUtils.LINE_SEPARATOR_UNIX);
+                        if (textArr.length > 0) {
+                            String lineText = textArr[textArr.length - 1];
+                            lineText = lineText.replace(IOUtils.LINE_SEPARATOR_WINDOWS, "").
+                                    replace(IOUtils.LINE_SEPARATOR_UNIX, "");
+                            int indentLen = (int) Math.ceil((double) lineText.length() / level);
+                            String lastTest = lineText.substring(0, indentLen);
+                            if (lastTest.trim().length() == 0) {
+                                indent = lastTest;
+                                isDeduced = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (isDeduced) {
+                    break;
+                }
+                parent = parent.getParentElement();
+            }
+        } catch (Exception e) {
+            System.out.println("Deduce indent failed");
+        }
+
+        return indent;
+    }
+
+
     /**
      * Method findAndReplaceProperties.
-     * 
+     *
      * @param counter
      * @param props
      * @param name
